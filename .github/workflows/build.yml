@@ -15,9 +15,17 @@ jobs:
     - name: Build with MSVC
       shell: cmd
       run: |
-        for /f "tokens=*" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find VC\Auxiliary\Build\vcvars64.bat') do set VCVARS=%%i
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find VC\Auxiliary\Build\vcvars64.bat`) do set "VCVARS=%%i"
+        if not defined VCVARS (
+          echo ERROR: vcvars64.bat not found
+          exit /b 1
+        )
         call "%VCVARS%"
-        cl /O2 /EHsc FreeFire_External_MSI.cpp /link user32.lib gdi32.lib psapi.lib /OUT:FreeFire_MSI.exe
+        cl /O2 /EHsc /std:c++17 FreeFire_External_MSI.cpp ^
+          /link user32.lib gdi32.lib psapi.lib ^
+          /OUT:FreeFire_MSI.exe
+        if errorlevel 1 exit /b 1
+        echo BUILD SUCCESS
 
     - name: Upload EXE
       uses: actions/upload-artifact@v4
